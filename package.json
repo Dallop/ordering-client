@@ -1,0 +1,39 @@
+{
+  "name": "react-scaffold",
+  "version": "1.0.0",
+  "description": "",
+  "main": "webpack.config.js",
+  "scripts": {
+    "start": "prepacked-dev-server",
+    "stage": "NODE_ENV=staging prepacked-build-script",
+    "deploy": "NODE_ENV=production prepacked-build-script",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
+  },
+  "author": "Mikey Murphy <mikeyamadeo@gmail.com> (https://twitter.com/TranscendMikey)",
+  "license": "ISC",
+  "dependencies": {
+    "glamor": "^2.20.37",
+    "glamorous": "^3.23.5",
+    "react": "15.3.2",
+    "react-dom": "15.3.2",
+    "react-redux": "4.4.5",
+    "react-router-dom": "^4.1.2",
+    "redux": "3.6.0",
+    "redux-axios-api-middleware": "0.2.0",
+    "redux-thunk": "2.1.0",
+    "trace-ui": "^2.5.2"
+  },
+  "devDependencies": {
+    "prepacked": "3.1.0",
+    "@storybook/react": "^3.2.8",
+    "@storybook/addon-actions": "^3.2.6",
+    "@storybook/addon-links": "^3.2.6"
+  },
+  "standard": {
+    "parser": "babel-eslint",
+    "rules": {
+      "strict": 0
+    }
+  }
+}
