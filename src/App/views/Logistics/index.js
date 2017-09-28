@@ -39,7 +39,7 @@ const SelectionMenuAccordion = ({ children, values, dontRenderAwaiting }) => {
   }
 }
 
-const SelectionMenuHeading = ({ icon, children, isActive, onClick }) => (
+const SelectionMenuHeading = ({ Icon, children, isActive, onClick }) => (
   <Flex
     align='center'
     bg={isActive ? clr.darkBase : clr.base}
@@ -49,7 +49,7 @@ const SelectionMenuHeading = ({ icon, children, isActive, onClick }) => (
     borderBottom={`solid 2px ${clr.baseHighlight}`}
   >
     <Flex w='70px' justify='center'>
-      <img src={icon} />
+      <Icon color={isActive ? clr.textOnDark : clr.textOnLight} />
     </Flex>
     <Box>
       <Title onDark={isActive} fontSize={3}>{children}</Title>
@@ -79,7 +79,7 @@ const SelectionOption = ({ title, children, onClick }) => (
 // if one value: skip || explicit select
 const SelectionMenu = (
   {
-    icon,
+    Icon,
     options = [],
     state = 'awaiting',
     onSelect = _ => _,
@@ -91,7 +91,7 @@ const SelectionMenu = (
     <Box transition='.25s'>
       <Box cursor={state === 'completed' ? 'pointer' : 'default'}>
         <SelectionMenuHeading
-          icon={icon}
+          Icon={Icon}
           onClick={onOpenRequest}
           isActive={state === 'active'}
           >
@@ -154,14 +154,14 @@ const Logistics = cc({
         >
           {selectionConfig.order.map((type, i) => {
             const {
-                icon,
+                Icon,
                 getHeading,
                 mapToMenuOption
               } = selectionConfig[type]
             const selection = selections[type]
             return (
               <SelectionMenu
-                icon={icon}
+                Icon={Icon}
                 heading={getHeading(selection)}
                 onSelect={this.setSelection.bind(null, type)}
                 options={this.props.options[type].map(mapToMenuOption)}
@@ -200,12 +200,12 @@ const mapMethodTypeToValues = {
 const selectionConfig = {
   order: [ 'location', 'timing', 'method' ],
   location: {
-    icon: require('./Place.svg'),
+    Icon: require('App/UI').Place,
     getHeading: value => value && value.title || 'Choose a Location',
     mapToMenuOption: l => ({ value: l, title: l.title, description: l.address })
   },
   timing: {
-    icon: require('./Time.svg'),
+    Icon: require('App/UI').Time,
     getHeading: value =>
       value && mapTimingTypeToValues[value].title || 'Choose a Time',
     mapToMenuOption: t => ({
@@ -215,7 +215,7 @@ const selectionConfig = {
     })
   },
   method: {
-    icon: require('./Method.svg'),
+    Icon: require('App/UI').ShoppingBag,
     getHeading: value =>
       value && mapMethodTypeToValues[value].title || 'Choose a Method',
     mapToMenuOption: m => ({

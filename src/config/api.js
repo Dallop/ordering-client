@@ -1,5 +1,5 @@
 import { configureApiMiddleware } from 'redux-axios-api-middleware'
-import { CALL_API } from 'App/state/actions'
+import { CALL_API } from 'App/state'
 
 let apiRoot = 'YOUR_DEV_API'
 

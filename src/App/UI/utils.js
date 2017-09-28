@@ -62,5 +62,3 @@ export function lightening (col, amt) {
 
   return (usePound ? '#' : '') + (g | b << 8 | r << 16).toString(16)
 }
-
-export default { opacity, lightening }
