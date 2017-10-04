@@ -1,3 +1,14 @@
+import { baseFontSize } from './settings'
+
+export const pxToEm = px => `${px / baseFontSize}em`
+
+export const createPlaceholderStyles = props => ({
+  '::-webkit-input-placeholder': props,
+  '::-moz-placeholder': props,
+  ':-ms-input-placeholder': props,
+  ':-moz-placeholder': props
+})
+
 // taken from https://github.com/scottcorgan/hex-to-rgb
 export const hexToRgb = hex => {
   if (hex.charAt && hex.charAt(0) === '#') {

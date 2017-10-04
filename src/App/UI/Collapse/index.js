@@ -1,7 +1,6 @@
 import React from 'react'
 import cc from 'create-react-class'
 import pt from 'prop-types'
-import { css } from 'glamor'
 import { Box } from '../Layout'
 import { Title } from '../Text'
 import { colors as clr } from '../settings'
@@ -21,14 +20,16 @@ const Collapse = cc({
     return (
       <Box width='100%'>
         <Box
-          bg={clr.darkBase}
+          bg={clr.base}
           cursor='pointer'
-          {...css({ ':hover': { color: clr.darkBaseHighlight } })}
+          transition='.2s'
+          hover={{ backgroundColor: clr.baseHighlight }}
           py={2}
           px={2}
           onClick={this.toggleOpen}
+          border={`solid 1px ${clr.baseBorder}`}
         >
-          <Title onDark>{open ? two : trigger}</Title>
+          <Title fontSize={3}>{open ? two : trigger}</Title>
         </Box>
         <Box
           maxHeight={open ? '1000px' : 0}

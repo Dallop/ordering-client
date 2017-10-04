@@ -1,8 +1,10 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import cc from 'create-react-class'
-import { css } from 'glamor'
+import pt from 'prop-types'
 import { Box, Flex, Title, settings, Button } from 'App/UI'
-
+import { phaseForward } from 'App/state'
+import { selectors } from './state'
 const { colors: clr } = settings
 
 /**
@@ -46,7 +48,7 @@ const SelectionMenuHeading = ({ Icon, children, isActive, onClick }) => (
     transition='.1s'
     py={2}
     onClick={onClick}
-    borderBottom={`solid 2px ${clr.baseHighlight}`}
+    borderBottom={`solid 2px ${clr.baseBorder}`}
   >
     <Flex w='70px' justify='center'>
       <Icon color={isActive ? clr.textOnDark : clr.textOnLight} />
@@ -62,10 +64,10 @@ const SelectionOption = ({ title, children, onClick }) => (
     align='center'
     onClick={onClick}
     py={2}
-    borderBottom={`solid 2px ${clr.lightBaseHighlight}`}
+    borderBottom={`solid 2px ${clr.lightBaseBorder}`}
     cursor='pointer'
     backgroundColor={clr.lightBase}
-    {...css({ ':hover': { backgroundColor: clr.lightBaseHighlight } })}
+    hover={{ backgroundColor: clr.lightBaseHighlight }}
     transition='.25s'
   >
     <Box pl='70px'>
@@ -101,6 +103,7 @@ const SelectionMenu = (
       <Box>
         {state === 'active' && options.map((op, i) => (
           <SelectionOption
+            key={i}
             title={op.title}
             onClick={onSelect.bind(null, op.value)}
                 >
@@ -113,22 +116,38 @@ const SelectionMenu = (
 }
 
 const Logistics = cc({
+  /**
+   * @desc if there is only one selection option we want to set that as the value, otherwise
+   * we'll want to get the value from the user.
+   */
   getInitialState () {
     const { options } = this.props
     return {
       selections: {
-        location: this.getDefaultOptionsValue(options.location.length),
-        timing: this.getDefaultOptionsValue(options.timing.length),
-        method: this.getDefaultOptionsValue(options.method.length)
+        ...selectionConfig.order.reduce(
+          (initialState, optionName) => ({
+            ...initialState,
+            [optionName]: options[optionName].length > 1
+              ? undefined
+              : options[0]
+          }),
+          {}
+        )
       }
     }
   },
-  getDefaultOptionsValue (options) {
-    return options.length > 1 ? undefined : options[0]
+  propTypes: {
+    onConfirmation: pt.func,
+    options: pt.shape({
+      location: pt.array.isRequired,
+      method: pt.array.isRequired,
+      timing: pt.array.isRequired
+    })
   },
-  /**
-   * @desc
-   */
+  onConfirm () {
+    // TODO: do something with selection values
+    this.props.onConfirmation()
+  },
   setSelection (key, value) {
     this.setState(prev => ({
       selections: { ...prev.selections, [key]: value }
@@ -161,6 +180,7 @@ const Logistics = cc({
             const selection = selections[type]
             return (
               <SelectionMenu
+                key={i}
                 Icon={Icon}
                 heading={getHeading(selection)}
                 onSelect={this.setSelection.bind(null, type)}
@@ -172,7 +192,7 @@ const Logistics = cc({
         </SelectionMenuAccordion>
         <Box p={2}>
           {this.readyForConfirmation() && (
-          <Button onClick={() => window.alert('Menu Time!')}>
+          <Button onClick={this.onConfirm}>
                   Confirm & View Menu
                 </Button>
               )}
@@ -182,7 +202,10 @@ const Logistics = cc({
   }
 })
 
-export default Logistics
+export default connect(
+  state => ({ options: selectors.getLogistics(state) }),
+  dispatch => ({ onConfirmation: () => dispatch(phaseForward()) })
+)(Logistics)
 
 const mapTimingTypeToValues = {
   NOW: {

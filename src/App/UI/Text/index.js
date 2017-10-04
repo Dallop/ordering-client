@@ -10,8 +10,7 @@ const TextBase = glamorous(({ is = 'span', onDark, ...rest }) => (
 
 export const Text = glamorous(TextBase)(
   { fontFamily: fonts.primary, color: colors.textOnLight, fontWeight: 300 },
-  ({ onDark = false }) =>
-    onDark ? { color: colors.textOnDark } : { color: colors.textOnLight }
+  ({ onDark = false }) => onDark ? { color: colors.textOnDark } : undefined
 )
 
 export const Title = glamorous(Text)({
