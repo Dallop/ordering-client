@@ -31,7 +31,8 @@ export default createReducer([], {
 const getOrderCosts = ({ locationConfig, order, entities }) => {
   const subtotal = order.reduce(
     (total, item) => {
-      let itemPrice = entities.menuItems[item.itemMenuId].price * item.quantity
+      let itemPrice = entities.menuItems[item.itemMenuId].priceVariations[item.priceVariationIndex].price *
+        item.quantity
       return itemPrice + total
     },
     0

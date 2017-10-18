@@ -1,5 +1,6 @@
 import React from 'react'
 import { css } from 'glamor'
+import { colors } from '../settings'
 
 export const Place = ({ color, onHover = {}, css: c = {} }) => (
   <svg
@@ -138,4 +139,18 @@ export const Cart = (
       </g>
     </g>
   </svg>
+)
+
+export const CloseAction = (
+  { onClick, color = colors.textOnLight, size = '25px' }
+) => (
+  <Close
+    {...{
+      size,
+      onClick,
+      color,
+      css: { cursor: 'pointer', transition: '.2s' },
+      onHover: { transform: 'scale(1.1)' }
+    }}
+  />
 )

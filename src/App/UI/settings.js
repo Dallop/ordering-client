@@ -17,7 +17,12 @@ const monochrome = {
 }
 
 // palette
-const p = { ...monochrome, flamingo: '#F4513F', cornflowerBlue: '#6495ED' }
+const p = {
+  ...monochrome,
+  flamingo: '#F4513F',
+  cornflowerBlue: '#6495ED',
+  mountainMeadow: '#18CCA0'
+}
 
 export const colors = {
   primaryCta: p.flamingo,
@@ -34,5 +39,7 @@ export const colors = {
   textOnLight: l(p.river_bed, -20),
   textOnDark: p.aqua_haze,
   disabledBackground: p.iron,
-  textOnDisabled: p.edward
+  textOnDisabled: p.edward,
+  error: p.flamingo,
+  success: p.mountainMeadow
 }

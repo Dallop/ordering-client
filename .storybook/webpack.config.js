@@ -4,7 +4,12 @@ module.exports = function (storybookBaseConfig, configType) {
   // 'PRODUCTION' is used when building the static version of storybook.
   // Make whatever fine-grained changes you need
   storybookBaseConfig.resolve.extensions.concat([ '.js', '.css' ])
-
+  storybookBaseConfig.resolve.modules = [
+    'src',
+    'shared',
+    'node_modules',
+    'public'
+  ]
   storybookBaseConfig.module.rules.push({
     test: /\.css$/,
     exclude: '/node_modules/',

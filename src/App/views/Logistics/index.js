@@ -4,7 +4,8 @@ import cc from 'create-react-class'
 import pt from 'prop-types'
 import { Box, Flex, Title, settings, Button } from 'App/UI'
 import { phaseForward } from 'App/state'
-import { selectors } from './state'
+import { updateLogisticSelection, selectors } from 'App/state/logistics'
+import ScheduleModal from './components/ScheduleModal'
 const { colors: clr } = settings
 
 /**
@@ -77,6 +78,42 @@ const SelectionOption = ({ title, children, onClick }) => (
   </Flex>
 )
 
+const PickUpNowSelectionOption = connect(state => ({
+  available: selectors.isTakingOrders(state),
+  location: selectors.getSelectedLocation(state),
+  scheduleModel: selectors.getLocationSchedule(state)
+}))(
+  cc({
+    propTypes: { available: pt.bool },
+    getInitialState () {
+      return { showAvailability: false }
+    },
+    showAvailability () {
+      this.setState(() => ({ showAvailability: true }))
+    },
+    hideAvailability () {
+      this.setState(() => ({ showAvailability: false }))
+    },
+    render () {
+      const { available, onClick, ...rest } = this.props
+      return (
+        <SelectionOption
+          {...rest}
+          title={`Order for Now ${available ? '' : '(Unavailable)'}`}
+          onClick={available ? onClick : this.showAvailability}
+        >
+          We'll prepare your order as soon as possible
+          <ScheduleModal
+            isOpen={this.state.showAvailability}
+            location={this.props.location}
+            onRequestClose={this.hideAvailability}
+          />
+        </SelectionOption>
+      )
+    }
+  })
+)
+
 // state: awaiting, active, complete
 // if one value: skip || explicit select
 const SelectionMenu = (
@@ -86,7 +123,8 @@ const SelectionMenu = (
     state = 'awaiting',
     onSelect = _ => _,
     onOpenRequest,
-    heading
+    heading,
+    OptionComponent
   }
 ) => {
   return (
@@ -102,13 +140,13 @@ const SelectionMenu = (
       </Box>
       <Box>
         {state === 'active' && options.map((op, i) => (
-          <SelectionOption
+          <OptionComponent
             key={i}
             title={op.title}
-            onClick={onSelect.bind(null, op.value)}
+            onClick={op.onClick || onSelect.bind(null, op.value)}
                 >
             {op.description}
-          </SelectionOption>
+          </OptionComponent>
               ))}
       </Box>
     </Box>
@@ -116,26 +154,6 @@ const SelectionMenu = (
 }
 
 const Logistics = cc({
-  /**
-   * @desc if there is only one selection option we want to set that as the value, otherwise
-   * we'll want to get the value from the user.
-   */
-  getInitialState () {
-    const { options } = this.props
-    return {
-      selections: {
-        ...selectionConfig.order.reduce(
-          (initialState, optionName) => ({
-            ...initialState,
-            [optionName]: options[optionName].length > 1
-              ? undefined
-              : options[0]
-          }),
-          {}
-        )
-      }
-    }
-  },
   propTypes: {
     onConfirmation: pt.func,
     options: pt.shape({
@@ -145,13 +163,10 @@ const Logistics = cc({
     })
   },
   onConfirm () {
-    // TODO: do something with selection values
     this.props.onConfirmation()
   },
   setSelection (key, value) {
-    this.setState(prev => ({
-      selections: { ...prev.selections, [key]: value }
-    }))
+    this.props.setSelection({ selectionName: key, value })
   },
   resetSelection (menuIndex) {
     selectionConfig.order
@@ -159,11 +174,11 @@ const Logistics = cc({
       .forEach(selectionType => this.setSelection(selectionType, undefined))
   },
   readyForConfirmation () {
-    const { location, timing, method } = this.state.selections
+    const { location, timing, method } = this.props.selections
     return location && timing && method
   },
   render () {
-    const { selections } = this.state
+    const { selections } = this.props
 
     return (
       <Box>
@@ -175,7 +190,8 @@ const Logistics = cc({
             const {
                 Icon,
                 getHeading,
-                mapToMenuOption
+                mapToMenuOption,
+                OptionComponent
               } = selectionConfig[type]
             const selection = selections[type]
             return (
@@ -186,6 +202,7 @@ const Logistics = cc({
                 onSelect={this.setSelection.bind(null, type)}
                 options={this.props.options[type].map(mapToMenuOption)}
                 onOpenRequest={() => this.resetSelection(i)}
+                OptionComponent={OptionComponent}
                 />
             )
           })}
@@ -202,17 +219,13 @@ const Logistics = cc({
   }
 })
 
-export default connect(
-  state => ({ options: selectors.getLogistics(state) }),
-  dispatch => ({ onConfirmation: () => dispatch(phaseForward()) })
-)(Logistics)
+export default connect(({ logistics }) => ({ ...logistics }), dispatch => ({
+  onConfirmation: () => dispatch(phaseForward()),
+  setSelection: params => dispatch(updateLogisticSelection(params))
+}))(Logistics)
 
-const mapTimingTypeToValues = {
-  NOW: {
-    title: 'Order for Now',
-    description: "We'll prepare your order as soon as possible"
-  }
-}
+const mapTimingTypeToValues = { NOW: { title: `Order for Now` } }
+
 const mapMethodTypeToValues = {
   PICK_UP: {
     title: 'Pick Up',
@@ -225,17 +238,19 @@ const selectionConfig = {
   location: {
     Icon: require('App/UI').Place,
     getHeading: value => value && value.title || 'Choose a Location',
-    mapToMenuOption: l => ({ value: l, title: l.title, description: l.address })
+    mapToMenuOption: l => ({
+      value: l,
+      title: l.title,
+      description: l.address
+    }),
+    OptionComponent: SelectionOption
   },
   timing: {
     Icon: require('App/UI').Time,
     getHeading: value =>
       value && mapTimingTypeToValues[value].title || 'Choose a Time',
-    mapToMenuOption: t => ({
-      value: t.type,
-      title: mapTimingTypeToValues[t.type].title,
-      description: mapTimingTypeToValues[t.type].description
-    })
+    mapToMenuOption: t => ({ value: t.type }),
+    OptionComponent: PickUpNowSelectionOption
   },
   method: {
     Icon: require('App/UI').ShoppingBag,
@@ -245,6 +260,7 @@ const selectionConfig = {
       value: m.type,
       title: mapMethodTypeToValues[m.type].title,
       description: mapMethodTypeToValues[m.type].description
-    })
+    }),
+    OptionComponent: SelectionOption
   }
 }

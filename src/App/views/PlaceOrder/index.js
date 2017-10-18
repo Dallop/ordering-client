@@ -3,10 +3,10 @@ import cc from 'create-react-class'
 import pt from 'prop-types'
 import { connect } from 'react-redux'
 import { css } from 'glamor'
+import { capitalize, toPrice } from 'utils/rendering'
 import {
   Flex,
   Box,
-  Input,
   Collapse,
   Button,
   Title,
@@ -14,21 +14,16 @@ import {
   Close,
   settings
 } from 'App/UI'
-import { phaseForward, phaseBack } from 'App/state'
+import { phaseForward } from 'App/state'
 import Nav, { NavHeight } from 'App/shared/Nav'
 import BackAction from 'App/shared/BackAction'
 import CartAmount from './components/CartAmount'
-import QuantityInput from './components/QuantityInput'
+import ItemMenu from './components/ItemMenu'
 import { selectors } from './state'
-import {
-  addToOrder,
-  removeFromOrder,
-  selectors as orderSelectors
-} from './state/order'
+import { removeFromOrder, selectors as orderSelectors } from './state/order'
 const { colors: clr } = settings
 
-const toPrice = num => `$${num.toFixed(2)}`
-const MenuListItem = ({ name, description, price }) => (
+const MenuListItem = ({ name, description, priceVariations }) => (
   <Box
     bg={clr.lightBase}
     hover={{ backgroundColor: clr.lightBaseHighlight }}
@@ -39,7 +34,7 @@ const MenuListItem = ({ name, description, price }) => (
     <Title>{name}</Title>
     <Flex justify='space-between'>
       <Text is='p' pr={2}>{description}</Text>
-      <Title>{toPrice(price)}</Title>
+      <Title>{toPrice(priceVariations[0].price)}</Title>
     </Flex>
   </Box>
 )
@@ -58,70 +53,6 @@ const Menu = ({ menuCategories, menuItems, onItemSelect }) => (
       </Collapse>
       ))}
   </Box>
-)
-
-const ItemMenu = connect()(
-  cc({
-    getInitialState () {
-      return { quantity: 1, instructions: '' }
-    },
-    onQuantityChange (newQuantity) {
-      this.setState(() => ({ quantity: newQuantity }))
-    },
-    onInstructionChange (value) {
-      this.setState(() => ({ instructions: value }))
-    },
-    addToOrder () {
-      this.props.dispatch(
-        addToOrder({
-          itemMenuId: this.props.id,
-          quantity: this.state.quantity,
-          instructions: this.state.instructions
-        })
-      )
-      this.props.onAddToOrder()
-    },
-    render () {
-      const { name, description, price } = this.props
-      return (
-        <Box position='relative'>
-          <Box p={3}>
-            <Flex justify='space-between'>
-              <Title fontSize={4}>{name}</Title>
-              <Title fontSize={3}>{toPrice(price)}</Title>
-            </Flex>
-            <Box py={2}>
-              <Text is='p'>{description}</Text>
-            </Box>
-            <Box mt={3}>
-              <Text>Select Quantity</Text>
-              <Box mt={1}>
-                <QuantityInput
-                  quantity={this.state.quantity}
-                  onChange={this.onQuantityChange}
-                  inputSize={2}
-                />
-              </Box>
-            </Box>
-            <Box mt={3}>
-              <Text>Special Instructions (optional)</Text>
-              <Box mt={1}>
-                <Input
-                  onChange={e => this.onInstructionChange(e.target.value)}
-                  value={this.state.instructions}
-                />
-              </Box>
-            </Box>
-          </Box>
-          <AnchorContainer>
-            <Button onClick={this.addToOrder}>
-              Add To Order
-            </Button>
-          </AnchorContainer>
-        </Box>
-      )
-    }
-  })
 )
 
 const AnchorContainer = ({ children }) => (
@@ -214,28 +145,26 @@ const PlaceOrder = cc({
     this.setState(prev => ({ showCart: false, showItemMenu: false }))
   },
   renderNav () {
-    const placeholder = <Box />
-    const openCart = (
-      <Box onClick={this.openCartView} cursor='pointer'><CartAmount /></Box>
-    )
     return this.state.showItemMenu
-      ? [ placeholder, openCart, <CloseAction onClick={this.closeItemMenu} /> ]
+      ? { right: <CloseAction onClick={this.closeItemMenu} /> }
       : this.state.showCart
-        ? [
-          placeholder,
-          placeholder,
-          <CloseAction onClick={this.closeCartView} />
-        ]
-        : [ <BackAction>Location</BackAction>, openCart, placeholder ]
+        ? { right: <CloseAction onClick={this.closeCartView} /> }
+        : {
+          left: <BackAction>Location</BackAction>,
+          center: (
+            <Box onClick={this.openCartView} cursor='pointer'>
+              <CartAmount />
+            </Box>
+          )
+        }
   },
   render () {
-    const { showItemMenu, showCart } = this.state
+    const { showItemMenu, showCart, activeItemId } = this.state
+    const { menuItems } = this.props
     return (
       <div {...fillViewportStyles}>
         <Box paddingBottom={NavHeight}>
-          <Nav>
-            {this.renderNav()}
-          </Nav>
+          <Nav {...this.renderNav()} />
         </Box>
         <div ref={this.getSize} {...fillViewportStyles}>
           {
@@ -247,11 +176,26 @@ const PlaceOrder = cc({
               showItemMenu &&
                 (
                   <ItemMenu
-                    {...this.props.menuItems[this.state.activeItemId]}
-                    onAddToOrder={this.closeItemMenu}
+                    itemDetails={menuItems[activeItemId]}
+                    onSuccessfulAddToOrder={this.closeItemMenu}
+                    children={
+                      onAddToOrder => (
+                        <AnchorContainer
+                          children={
+                            (
+                              <Button
+                                onClick={onAddToOrder}
+                                children='Add To Order'
+                              />
+                            )
+                          }
+                        />
+                      )
+                    }
                   />
                 )
             }
+            <Box py='50px' />
           </PopupView>
           <PopupView isOpen={showCart} height={this.state.viewHeight}>
             {showCart && <OrderCart />}
@@ -264,7 +208,7 @@ const PlaceOrder = cc({
 
 export default connect(state => ({
   order: state.order,
-  ...selectors.getMenu()
+  ...selectors.getMenu(state)
 }))(PlaceOrder)
 
 const OrderInstructions = ({ copy }) => (
@@ -293,7 +237,13 @@ const OrderItem = ({ item, onRequestRemove }) => (
       </Flex>
     </Flex>
     <Flex align='center' verticalAlign='middle'>
-      <Title>{toPrice(item.price * item.quantity)}</Title>
+      <Title>
+        {
+          toPrice(
+            item.priceVariations[item.priceVariationIndex].price * item.quantity
+          )
+        }
+      </Title>
       <Box ml={2} mb={'-3px'} cursor='pointer'>
         <CloseAction
           size='15px'
@@ -306,7 +256,11 @@ const OrderItem = ({ item, onRequestRemove }) => (
 )
 
 const LineItem = ({ label, value, hasTopline }) => (
-  <Flex justify='space-between' borderTop={hasTopline} py={`3px`}>
+  <Flex
+    justify='space-between'
+    borderTop={`solid 1px ${hasTopline ? clr.lightBaseBorder : 'transparent'}`}
+    py={`3px`}
+  >
     <Text>{label}</Text>
     <Text>
       {value}
@@ -317,23 +271,44 @@ const LineItem = ({ label, value, hasTopline }) => (
 const OrderCart = connect(
   state => ({
     ...orderSelectors.getOrderCosts(state),
-    orderContents: orderSelectors.getOrderContents(state)
+    orderContents: orderSelectors.getOrderContents(state),
+    minimumOrderValue: state.locationConfig.minimumOrderValue
   }),
-  dispatch => ({ moveToCheckout: () => dispatch(phaseForward()) })
+  dispatch => ({
+    moveToCheckout: () => dispatch(phaseForward()),
+    removeItemFromOrder: index => dispatch(removeFromOrder(index))
+  })
 )(
   cc({
     propTypes: {
       orderContents: pt.array,
       tax: pt.number,
       subtotal: pt.number,
-      total: pt.number
+      total: pt.number,
+      minimumOrderValue: pt.number
     },
-    costs: [ 'subtotal', 'tax', 'total' ],
+    getInitialState () {
+      return { error: false }
+    },
     removeItem (index) {
-      this.props.dispatch(removeFromOrder(index))
+      this.props.removeItemFromOrder(index)
+    },
+    componentDidMount () {
+      const { total, minimumOrderValue } = this.props
+      if (total < minimumOrderValue) {
+        this.setState(() => ({
+          error: `Order amount cannot be below ${toPrice(
+            minimumOrderValue
+          )} minimum.`
+        }))
+      }
     },
     requestCheckout () {
-      this.props.moveToCheckout()
+      const { total, minimumOrderValue } = this.props
+      if (total >= minimumOrderValue) {
+        this.setState(() => ({ error: '' }))
+        this.props.moveToCheckout()
+      }
     },
     render () {
       return (
@@ -352,14 +327,18 @@ const OrderCart = connect(
           <AnchorContainer>
             <Box pb={1}>
               {
-                this.costs.map((cost, i) => (
+                [ 'subtotal', 'tax', 'total' ].map((cost, i) => (
                   <LineItem
-                    label={cost}
+                    key={cost}
+                    label={capitalize(cost)}
                     value={toPrice(this.props[cost])}
                     hasTopline={i > 0}
                   />
                 ))
               }
+            </Box>
+            <Box pb={this.state.error ? 1 : 0} pl={1} transition='.25s'>
+              <Text error>{this.state.error}</Text>
             </Box>
             <Button theme='secondary' onClick={this.requestCheckout}>
               Checkout

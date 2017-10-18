@@ -6,10 +6,11 @@ import cc from 'create-react-class'
 import { Flex, Box, settings } from 'App/UI'
 
 const config = {
-  phases: [ 'logistics', 'placeOrder', 'checkout' ],
+  phases: [ 'logistics', 'placeOrder', 'checkout', 'confirmation' ],
   logistics: { Component: require('./views').Logistics },
   placeOrder: { Component: require('./views').PlaceOrder },
-  checkout: { Component: require('./views').Checkout }
+  checkout: { Component: require('./views').Checkout },
+  confirmation: { Component: require('./views').Confirmation }
 }
 
 const App = cc({

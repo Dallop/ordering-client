@@ -3,8 +3,7 @@ import { Flex, settings as s } from 'App/UI'
 
 export const NavHeight = '50px'
 
-const positions = [ 'flex-start', 'center', 'flex-end' ]
-const Nav = ({ children }) => (
+const Nav = ({ left, center, right }) => (
   <Flex
     zIndex='10'
     position='fixed'
@@ -18,11 +17,9 @@ const Nav = ({ children }) => (
     bg={s.colors.lightBase}
     borderBottom={`solid 1px ${s.colors.lightBaseBorder}`}
   >
-    {
-      children.map((child, i) => (
-        <Flex width='33%' justify={positions[i]} key={i}>{child}</Flex>
-      ))
-    }
+    <Flex width='33%' justify='flex-start'>{left}</Flex>
+    <Flex width='33%' justify='center'>{center}</Flex>
+    <Flex width='33%' justify='flex-end'>{right}</Flex>
   </Flex>
 )
 
