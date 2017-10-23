@@ -56,12 +56,12 @@ const BaseModal = (
 const Modal = ({ heading, onRequestClose, ...props }) => (
   <BaseModal {...props} minWidth='320px' onRequestClose={onRequestClose}>
     <Box>
-      <Box px={2} py={1}>
+      <Box px={2} py={2}>
         <Flex justify='space-between' align='center'>
           <Box>
             {heading}
           </Box>
-          <CloseAction onClick={onRequestClose} />
+          <CloseAction onClick={onRequestClose} size='25px' />
         </Flex>
       </Box>
       {props.children}

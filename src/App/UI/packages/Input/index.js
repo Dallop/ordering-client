@@ -8,8 +8,8 @@ import {
   createPlaceholderStyles
 } from '../utils'
 
-export const Input = props => (
-  <input {...props} {...base} {...font} {...border} />
+export const Input = ({ baseRef = _ => _, ...rest }) => (
+  <input {...rest} {...base} {...font} {...border} ref={baseRef} />
 )
 
 export const Select = ({ ...rest }) => (
