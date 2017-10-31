@@ -12,10 +12,25 @@ export const Input = ({ baseRef = _ => _, ...rest }) => (
   <input {...rest} {...base} {...font} {...border} ref={baseRef} />
 )
 
+export const Textarea = (
+  { baseRef = _ => _, height = pxToEm(100), ...rest }
+) => (
+  <textarea
+    {...css({ height })}
+    {...rest}
+    {...base}
+    {...font}
+    {...border}
+    {...textarea}
+    ref={baseRef}
+  />
+)
+
 export const Select = ({ ...rest }) => (
   <select {...rest} {...base} {...font} {...border} />
 )
 
+const textarea = css({ resize: 'vertical' })
 const base = css({
   width: '100%',
   height: pxToEm(40),

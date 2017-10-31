@@ -25,11 +25,18 @@ const themes = {
   secondary: css({
     backgroundColor: colors.secondaryCta,
     ':hover': { backgroundColor: l(colors.secondaryCta, -10) }
-  })
+  }),
+  disabled: css({ backgroundColor: colors.base })
 }
 
-const Button = ({ children, theme = 'primary', ...props }) => (
-  <button {...props} {...base} {...main} {...themes[theme]}>
+const Button = ({ children, disabled, theme = 'primary', ...props }) => (
+  <button
+    {...props}
+    {...base}
+    {...main}
+    {...themes[disabled ? 'disabled' : theme]}
+    disabled={disabled}
+  >
     {children}
   </button>
 )

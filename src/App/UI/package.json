@@ -1,6 +1,6 @@
 {
   "name": "boostly-ui",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "reusable components made w/ <3 by Boostly",
   "main": "dist",
   "scripts": {
@@ -30,7 +30,7 @@
     "glamor": "^2.20.37",
     "glamorous": "^3.23.5",
     "react": "15.3.2",
-    "webfontloader": "^1.6.28"
+    "webfontloader": "^1.6.28",
     "react-checkbox-group": "^3.3.1",
     "react-radio-group": "^3.0.2",
     "styled-system": "^1.0.0-15"
