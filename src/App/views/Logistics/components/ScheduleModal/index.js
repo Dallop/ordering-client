@@ -1,21 +1,6 @@
 import React from 'react'
-// import Modal from 'App/shared/Modal'
-import { Flex, Box, Title, Close, Modal, settings as s } from 'App/UI'
+import { Flex, Box, Title, Modal, settings as s } from 'App/UI'
 import { indexToWeekDay, weekModelToString } from 'App/logic'
-
-const CloseAction = (
-  { onClick, color = s.colors.textOnLight, size = '25px' }
-) => (
-  <Close
-    {...{
-      size,
-      onClick,
-      color,
-      css: { cursor: 'pointer', transition: '.2s' },
-      onHover: { transform: 'scale(1.1)' }
-    }}
-  />
-)
 
 const Schedule = ({ isOpen, location, onRequestClose }) => {
   return (
@@ -29,7 +14,7 @@ const Schedule = ({ isOpen, location, onRequestClose }) => {
         </Box>
         )}
     >
-      {weekModelToString(location.availability.weekModel).map((weekDay, i) => {
+      {weekModelToString(location.pickUpSchedule.models).map((weekDay, i) => {
         let value = ''
         if (!weekDay.length) {
           value = 'Unavailable'

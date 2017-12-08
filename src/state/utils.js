@@ -20,3 +20,9 @@ export function createAsyncActions (name) {
 
   return [ base, success, failure ]
 }
+
+export const mapIdsToEntities = (ids, entities) => !ids || !entities ? [] : ids
+    .filter(id => entities[id])
+    .map(id => entities[id])
+
+export const refToId = ref => ref.split('/').pop()

@@ -1,11 +1,12 @@
 {
   "name": "boostly-ui",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "reusable components made w/ <3 by Boostly",
   "main": "dist",
   "scripts": {
     "build": "babel --copy-files --out-dir dist packages",
     "prepublish": "npm run build",
+    "postpublish": "rm -rf dist",
     "prebuild": "rm -rf dist && mkdir dist"
   },
   "files": [

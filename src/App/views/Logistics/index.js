@@ -4,7 +4,12 @@ import cc from 'create-react-class'
 import pt from 'prop-types'
 import { Box, Flex, Title, settings, Button } from 'App/UI'
 import { phaseForward } from 'App/state'
-import { updateLogisticSelection, selectors } from 'App/state/logistics'
+import {
+  getLocationEntities,
+  updateLogisticSelection,
+  getPickUpSchedules,
+  selectors
+} from 'App/state/logistics'
 import ScheduleModal from './components/ScheduleModal'
 const { colors: clr } = settings
 
@@ -155,15 +160,25 @@ const SelectionMenu = (
 
 const Logistics = cc({
   propTypes: {
-    onConfirmation: pt.func,
+    getLocations: pt.func.isRequired,
+    selections: pt.shape({
+      location: pt.object,
+      method: pt.string,
+      timing: pt.string
+    }),
     options: pt.shape({
       location: pt.array.isRequired,
       method: pt.array.isRequired,
       timing: pt.array.isRequired
     })
   },
+  componentDidMount () {
+    this.props.getLocations()
+    this.props.getPickUpSchedules()
+  },
   onConfirm () {
-    this.props.onConfirmation()
+    const { history, match, selections } = this.props
+    history.push({ pathname: `${match.url}/${selections.location.menuId}` })
   },
   setSelection (key, value) {
     this.props.setSelection({ selectionName: key, value })
@@ -179,7 +194,6 @@ const Logistics = cc({
   },
   render () {
     const { selections } = this.props
-
     return (
       <Box>
         <SelectionMenuAccordion
@@ -219,10 +233,18 @@ const Logistics = cc({
   }
 })
 
-export default connect(({ logistics }) => ({ ...logistics }), dispatch => ({
-  onConfirmation: () => dispatch(phaseForward()),
-  setSelection: params => dispatch(updateLogisticSelection(params))
-}))(Logistics)
+export default connect(
+  (state, props) => ({
+    options: selectors.getLogisticsOptions(props.match.params.orgId)(state),
+    selections: selectors.getLogisticsSelections(state)
+  }),
+  (dispatch, props) => ({
+    onConfirmation: () => dispatch(phaseForward()),
+    setSelection: params => dispatch(updateLogisticSelection(params)),
+    getLocations: () => dispatch(getLocationEntities(props.match.params)),
+    getPickUpSchedules: () => dispatch(getPickUpSchedules(props.match.params))
+  })
+)(Logistics)
 
 const mapTimingTypeToValues = { NOW: { title: `Order for Now` } }
 
@@ -237,11 +259,11 @@ const selectionConfig = {
   order: [ 'location', 'timing', 'method' ],
   location: {
     Icon: require('App/UI').Place,
-    getHeading: value => value && value.title || 'Choose a Location',
+    getHeading: value => value && value.name || 'Choose a Location',
     mapToMenuOption: l => ({
       value: l,
-      title: l.title,
-      description: l.address
+      title: l.name,
+      description: `${l.address.line1}, ${l.address.state} ${l.address.zip}`
     }),
     OptionComponent: SelectionOption
   },

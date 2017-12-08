@@ -9,7 +9,12 @@ const TextBase = glamorous(({ is = 'span', onDark, ...rest }) => (
 ))(fontSize, space)
 
 export const Text = glamorous(TextBase)(
-  { fontFamily: fonts.primary, color: colors.textOnLight, fontWeight: 300 },
+  {
+    fontFamily: fonts.primary,
+    color: colors.textOnLight,
+    fontWeight: 300,
+    transition: '.25s'
+  },
   ({ onDark = false }) => onDark ? { color: colors.textOnDark } : undefined,
   ({ error = false }) => error ? { color: colors.error } : undefined,
   ({ success = false }) => success ? { color: colors.success } : undefined

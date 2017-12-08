@@ -7,20 +7,26 @@ import { configureStore } from './state'
 import App from './App'
 import { settings } from './App/UI'
 
-const store = configureStore()
-const root = document.getElementById('root')
+if (__PROD__) {
+  // eslint-disable-line
+  const store = configureStore()
+  const root = document.getElementById('root')
 
-const Root = () => (
-  <Provider {...{ store, key: 'provider' }}>
-    <ThemeProvider theme={settings}>
+  const Root = () => (
+    <Provider {...{ store, key: 'provider' }}>
       <HashRouter>
         <App />
       </HashRouter>
-    </ThemeProvider>
-  </Provider>
-)
+    </Provider>
+  )
 
-Dom.render(<Root />, root)
+  Dom.render(<Root />, root)
+}
+
+if (__DEV__) {
+  // eslint-disable-line
+  require('App/views/ManageOrders/test/ControlPanel')
+}
 
 if (module.hot) {
   module.hot.accept()

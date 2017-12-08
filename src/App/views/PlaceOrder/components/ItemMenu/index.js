@@ -15,76 +15,139 @@ import {
   CheckboxOption,
   Modal
 } from 'App/UI'
+import Media from 'react-media'
 import QuantityInput from '../QuantityInput'
+import { populateOptionSets, getMissingSelectionReqs } from './logic'
 import { addToOrder } from 'App/views/PlaceOrder/state/order'
 
-const OptionsForm = (
-  { formProperties, options, selectedValues = [], onUpdate }
-) => {
-  const { canPickMany, name, isRequired } = formProperties
-  const Group = canPickMany ? CheckboxGroup : RadioGroup
-  const Option = canPickMany ? CheckboxOption : RadioOption
-  const values = canPickMany ? selectedValues : selectedValues[0]
-  const requirementsFulfilled = canPickMany ? values.length : values
-  return (
-    <Box>
-      <Text>
-        {name}
-        {' '}
-        {canPickMany ? '' : '(Choose 1)'}
-        {' '}
-        <Text error={!requirementsFulfilled} success={requirementsFulfilled}>
-          {isRequired ? 'Required' : ''}
+/**
+ * TODO: defaults makes a mess of the logic here. simplify it somehow?
+ *       probably better to seperate logic?
+ */
+const OptionSetForm = cc({
+  onChange (selectedValues) {
+    if (selectedValues.length > this.props.max) return
+    this.props.onUpdate(selectedValues)
+  },
+  render () {
+    const {
+      name,
+      options,
+      selectedValues = [],
+      optionsAreDefaults: defaults,
+      max,
+      min
+    } = this.props
+    const requirementsFulfilled = defaults
+      ? true
+      : min ? selectedValues.length >= min : false
+    const isRequired = defaults ? false : min
+    return (
+      <Box>
+        <Text>
+          {name}
+          {' '}
+          {
+            defaults
+              ? '(De-Select to Remove)'
+              : min && max
+                ? `Choose ${min}, & up to ${max}`
+                : min ? `Choose ${min}` : max ? `Choose up to ${max}` : ''
+          }
+          {' '}
+          <Text error={!requirementsFulfilled} success={requirementsFulfilled}>
+            {isRequired && ' Required'}
+          </Text>
         </Text>
-      </Text>
-      <Group selectedValue={values} onChange={onUpdate} name={name}>
-        <Flex wrap>
-          {options.map((option, i) => (
-            <Box width='48%' mt={1} ml={i % 2 ? '2%' : 0} key={i}>
-              <Option value={option.id}>
-                <Flex justify='space-between'>
-                  <Box>{option.name}</Box>
-                  <Box>
-                    {option.cost > 0 ? toPrice(option.cost) : '-'}
-                  </Box>
-                </Flex>
-              </Option>
-            </Box>
+        <CheckboxGroup
+          selectedValue={selectedValues}
+          onChange={this.onChange}
+          name={name}
+        >
+          <Flex wrap>
+            {options.map((option, i) => (
+              <Media query='(max-width: 499px)' key={i}>
+                {matches => {
+                  const width = matches ? '100%' : '48%'
+                  const ml = matches ? 0 : i % 2 ? '2%' : 0
+                  return (
+                    <Box width={width} mt={1} ml={ml}>
+                      <CheckboxOption value={option.id}>
+                        <Flex justify='space-between'>
+                          <Box>{option.name}</Box>
+                          <Box>
+                            {option.cost > 0 ? toPrice(option.cost) : '-'}
+                          </Box>
+                        </Flex>
+                      </CheckboxOption>
+                    </Box>
+                  )
+                }}
+              </Media>
               ))}
-        </Flex>
-      </Group>
-    </Box>
-  )
-}
+          </Flex>
+        </CheckboxGroup>
+      </Box>
+    )
+  }
+})
 
+const MissingReqsModal = ({ reqs, ...rest }) => (
+  <Modal {...rest} heading={<Title fontSize={3}>Don't forget:</Title>}>
+    <Box px={3} pb={3} pt={1} bg='lightBaseHighlight'>
+      <Box is='ul' pt={2}>
+        {reqs.map((req, i) => <Box is='li' key={i}>{req.name}</Box>)}
+      </Box>
+    </Box>
+  </Modal>
+)
+
+const arrayToMap = (key, array) =>
+  array.reduce((map, entity) => ({ ...map, [entity[key]]: entity }), {})
 /**
  * @prop itemDetails {Object} - menu item object including pricing, description, title, etc.
  * @prop children {Function} - render props function intended to turn rendering control over parent.
  * The function takes this.addToOrder as it's parameter.
  * @prop onSuccessfulAddToOrder {Function} function to run when ItemMenu has validated that all info
  * required to add to an order.
- * @prop optionSetEntities {Object} {1: {id: 1, name: {String}, canPickMany: {Bool}, isRequired: {Bool}, options: {Array}}}
- * @prop optionEntities {Object} {1: {id: 1, name: {String}, cost: {Number}}}
+ * @prop optionSets {Array} [{id: 1, name: String, canPickMany: Bool, isRequired: Bool, options: [option]}]
+ * @prop optionSetMap {Object} {[optionSetId]: optionSet}
  */
-const ItemMenu = connect(({ entities }) => ({
-  optionEntities: entities.options,
-  optionSetEntities: entities.optionSets
-}))(
+const ItemMenu = connect(({ entities }, props) => {
+  let optionSets = []
+  let optionSetMap = {}
+  if (props.itemDetails.optionSets) {
+    optionSets = populateOptionSets({
+      optionSetIds: props.itemDetails.optionSets,
+      ...entities
+    })
+    optionSetMap = arrayToMap('id', optionSets)
+  }
+  return { optionSets, optionSetMap }
+})(
   cc({
     propTypes: {
       itemDetails: pt.object,
       children: pt.func,
       onSuccessfulAddToOrder: pt.func,
-      optionEntities: pt.object,
-      optionSetEntities: pt.object
+      optionSets: pt.array
+    },
+    getDefaultSelectionValues () {
+      let selectionValues = {}
+      this.props.optionSets.forEach(set => {
+        if (set.optionsAreDefaults) {
+          selectionValues[set.id] = set.options.map(op => op.id)
+        }
+      })
+      return selectionValues
     },
     getInitialState () {
       return {
         quantity: 1,
         instructions: '',
-        optionSetValues: {},
+        selectionValues: this.getDefaultSelectionValues(),
         priceVariationIndex: 0,
-        showMissingRequirements: false
+        showMissingSelectionReqs: false
       }
     },
     onQuantityChange (newQuantity) {
@@ -96,59 +159,28 @@ const ItemMenu = connect(({ entities }) => ({
     /**
      * { [setId]: [optionId]}
      */
-    onOptionSelect (setId, selection) {
-      this.setState((prevState, props) => {
-        let setValue = {}
-        if (props.optionSetEntities[setId].canPickMany) {
-          setValue = { [setId]: selection }
-        } else {
-          // radio option sets should not have more than one value and user should be able to toggle a value "off"
-          const previous = prevState.optionSetValues[setId] || []
-          setValue = {
-            [setId]: previous[0] === selection ? [] : [ selection ]
-          }
-        }
-        return {
-          optionSetValues: { ...prevState.optionSetValues, ...setValue }
-        }
-      })
-    },
-    getMissingRequirements () {
-      const { optionSets } = this.props.itemDetails
-      const { optionSetValues } = this.state
-      let missingReqs = []
-      optionSets.forEach(setId => {
-        if (!(optionSetValues[setId] && optionSetValues[setId][0])) {
-          missingReqs = [ ...missingReqs, setId ]
-        }
-      })
-      console.log(missingReqs)
-      return missingReqs
-    },
-    getAllSelectedOptions () {
-      const { optionSetValues } = this.state
-      return Object
-        .keys(optionSetValues)
-        .reduce(
-          (options, optionSetId) => [
-            ...options,
-            ...optionSetValues[optionSetId]
-          ],
-          []
-        )
+    onOptionSelect (setId, selections) {
+      this.setState(prev => ({
+        selectionValues: { ...prev.selectionValues, [setId]: selections }
+      }))
     },
     addToOrder () {
-      if (this.getMissingRequirements().length) {
-        console.log('hi')
-        this.setState(() => ({ showMissingRequirements: true }))
+      if (getMissingSelectionReqs(this.state, this.props).length) {
+        this.setState(() => ({ showMissingSelectionReqs: true }))
       } else {
+        const {
+          selectionValues,
+          quantity,
+          instructions,
+          priceVariationIndex
+        } = this.state
         this.props.dispatch(
           addToOrder({
             itemMenuId: this.props.itemDetails.id,
-            priceVariationIndex: this.state.priceVariationIndex,
-            quantity: this.state.quantity,
-            instructions: this.state.instructions,
-            options: this.getAllSelectedOptions()
+            priceVariationIndex,
+            quantity,
+            instructions,
+            selectionValues
           })
         )
         this.props.onSuccessfulAddToOrder()
@@ -158,9 +190,9 @@ const ItemMenu = connect(({ entities }) => ({
       this.setState(() => ({ priceVariationIndex }))
     },
     renderPriceVariations () {
-      const { priceVariations } = this.props.itemDetails
+      const { servingPortions } = this.props.itemDetails
       const { priceVariationIndex } = this.state
-      if (priceVariations.length) {
+      if (servingPortions.length > 1) {
         return (
           <Box>
             <Text>Select a Variation</Text>
@@ -169,7 +201,7 @@ const ItemMenu = connect(({ entities }) => ({
               selectedValue={priceVariationIndex}
               onChange={this.setSelectedVariation}
             >
-              {priceVariations.map((variant, i) => (
+              {servingPortions.map((variant, i) => (
                 <Box key={i} mt={1}>
                   <RadioOption
                     value={i}
@@ -187,29 +219,33 @@ const ItemMenu = connect(({ entities }) => ({
         )
       }
     },
-    getOptionsFromSet (setId) {
-      const { optionSetEntities, optionEntities } = this.props
-      return optionSetEntities[setId].options.map(opId => optionEntities[opId])
-    },
     render () {
-      const { priceVariationIndex, showMissingRequirements } = this.state
-      const { itemDetails } = this.props
-      const { name, description, priceVariations, optionSets } = itemDetails
+      const {
+        selectionValues,
+        priceVariationIndex,
+        showMissingSelectionReqs
+      } = this.state
+      const { itemDetails, optionSets } = this.props
+      const { name, description, servingPortions } = itemDetails
       return (
         <Box position='relative'>
-          <Modal
-            isOpen={showMissingRequirements}
-            onRequestClose={
-              () => this.setState({ showMissingRequirements: false })
-            }
-          >
-            {this.getMissingRequirements()}
-          </Modal>
+          {
+            showMissingSelectionReqs &&
+              (
+                <MissingReqsModal
+                  isOpen={showMissingSelectionReqs}
+                  onRequestClose={
+                    () => this.setState({ showMissingSelectionReqs: false })
+                  }
+                  reqs={getMissingSelectionReqs(this.state, this.props)}
+                />
+              )
+          }
           <Box p={3}>
             <Flex justify='space-between'>
               <Title fontSize={4}>{name}</Title>
               <Title fontSize={3}>
-                {toPrice(priceVariations[priceVariationIndex].price)}
+                {toPrice(servingPortions[priceVariationIndex].price)}
               </Title>
             </Flex>
             <Box py={2}>
@@ -226,14 +262,13 @@ const ItemMenu = connect(({ entities }) => ({
                 />
               </Box>
             </Box>
-            {optionSets && optionSets.map((setId, i) => (
+            {optionSets && optionSets.map((set, i) => (
               <Box mt={2}>
-                <OptionsForm
+                <OptionSetForm
                   key={i}
-                  selectedValues={this.state.optionSetValues[setId]}
-                  onUpdate={value => this.onOptionSelect(setId, value)}
-                  options={this.getOptionsFromSet(setId)}
-                  formProperties={this.props.optionSetEntities[setId]}
+                  selectedValues={selectionValues[set.id]}
+                  onUpdate={value => this.onOptionSelect(set.id, value)}
+                  {...set}
                     />
               </Box>
                 ))}

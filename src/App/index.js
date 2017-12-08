@@ -1,23 +1,16 @@
 import './style'
 import React from 'react'
-import pt from 'prop-types'
 import { connect } from 'react-redux'
+import { Route, withRouter } from 'react-router-dom'
 import cc from 'create-react-class'
+import { getSettings } from 'App/state'
 import { Flex, Box, settings } from 'App/UI'
 
-const config = {
-  phases: [ 'logistics', 'placeOrder', 'checkout', 'confirmation' ],
-  logistics: { Component: require('./views').Logistics },
-  placeOrder: { Component: require('./views').PlaceOrder },
-  checkout: { Component: require('./views').Checkout },
-  confirmation: { Component: require('./views').Confirmation }
-}
-
 const App = cc({
-  propTypes: { orderPhaseIndex: pt.number },
+  componentDidMount () {
+    this.props.dispatch(getSettings())
+  },
   render () {
-    const phase = config.phases[this.props.orderPhaseIndex]
-    const View = config[phase].Component
     return (
       <Box bg='rgba(0, 0, 0, 0.8)' w='100%' height='100%'>
         <Flex
@@ -28,11 +21,25 @@ const App = cc({
           height='100%'
           position='relative'
         >
-          <View />
+          <Route
+            exact
+            path='/order/:orgId'
+            component={require('./views').Logistics}
+          />
+          <Route
+            exact
+            path='/order/:orgId/:menuId'
+            component={require('./views').PlaceOrder}
+          />
+          <Route
+            exact
+            path='/order/:orgId/:menuId/checkout'
+            component={require('./views').Checkout}
+          />
         </Flex>
       </Box>
     )
   }
 })
 
-export default connect(({ orderPhaseIndex }) => ({ orderPhaseIndex }))(App)
+export default withRouter(connect()(App))

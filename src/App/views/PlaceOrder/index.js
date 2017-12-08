@@ -1,6 +1,7 @@
 import React from 'react'
 import cc from 'create-react-class'
 import pt from 'prop-types'
+import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
 import { css } from 'glamor'
 import { capitalize, toPrice } from 'utils/rendering'
@@ -11,19 +12,17 @@ import {
   Button,
   Title,
   Text,
-  Close,
+  CloseAction,
   settings
 } from 'App/UI'
-import { phaseForward } from 'App/state'
 import Nav, { NavHeight } from 'App/shared/Nav'
-import BackAction from 'App/shared/BackAction'
 import CartAmount from './components/CartAmount'
 import ItemMenu from './components/ItemMenu'
-import { selectors } from './state'
+import { getMenuEntities, selectors } from './state'
 import { removeFromOrder, selectors as orderSelectors } from './state/order'
 const { colors: clr } = settings
 
-const MenuListItem = ({ name, description, priceVariations }) => (
+const MenuListItem = ({ name, description, servingPortions }) => (
   <Box
     bg={clr.lightBase}
     hover={{ backgroundColor: clr.lightBaseHighlight }}
@@ -34,12 +33,12 @@ const MenuListItem = ({ name, description, priceVariations }) => (
     <Title>{name}</Title>
     <Flex justify='space-between'>
       <Text is='p' pr={2}>{description}</Text>
-      <Title>{toPrice(priceVariations[0].price)}</Title>
+      <Title>{toPrice(servingPortions[0].price)}</Title>
     </Flex>
   </Box>
 )
 
-const Menu = ({ menuCategories, menuItems, onItemSelect }) => (
+const Menu = ({ menuCategories = [], menuItems, onItemSelect }) => (
   <Box>
     {menuCategories.map((mcat, i) => (
       <Collapse trigger={mcat.name} key={i}>
@@ -109,6 +108,7 @@ const PopupView = cc({
  */
 const PlaceOrder = cc({
   propTypes: {
+    getMenuData: pt.func,
     menuCategories: pt.array,
     menuItems: pt.object,
     onBack: pt.func
@@ -120,6 +120,9 @@ const PlaceOrder = cc({
       activeItemId: 2,
       showCart: false
     }
+  },
+  componentDidMount () {
+    this.props.getMenuData()
   },
   getSize (node) {
     this.setState(() => ({
@@ -150,7 +153,9 @@ const PlaceOrder = cc({
       : this.state.showCart
         ? { right: <CloseAction onClick={this.closeCartView} /> }
         : {
-          left: <BackAction>Location</BackAction>,
+          left: (
+            <Link to={`/order/${this.props.match.params.orgId}`}>Location</Link>
+          ),
           center: (
             <Box onClick={this.openCartView} cursor='pointer'>
               <CartAmount />
@@ -161,6 +166,7 @@ const PlaceOrder = cc({
   render () {
     const { showItemMenu, showCart, activeItemId } = this.state
     const { menuItems } = this.props
+
     return (
       <div {...fillViewportStyles}>
         <Box paddingBottom={NavHeight}>
@@ -168,7 +174,8 @@ const PlaceOrder = cc({
         </Box>
         <div ref={this.getSize} {...fillViewportStyles}>
           {
-            (!showItemMenu || !showCart) &&
+            !showItemMenu &&
+              !showCart &&
               <Menu {...this.props} onItemSelect={this.openItemMenu} />
           }
           <PopupView isOpen={showItemMenu} height={this.state.viewHeight}>
@@ -198,7 +205,20 @@ const PlaceOrder = cc({
             <Box py='50px' />
           </PopupView>
           <PopupView isOpen={showCart} height={this.state.viewHeight}>
-            {showCart && <OrderCart />}
+            {
+              showCart &&
+                (
+                  <OrderCart
+                    moveToCheckout={
+                      () =>
+                        this.props.history.push({
+                          pathname: `${this.props.match.url}/checkout`
+                        })
+                    }
+                    location={this.props.location}
+                  />
+                )
+            }
           </PopupView>
         </div>
       </div>
@@ -206,18 +226,41 @@ const PlaceOrder = cc({
   }
 })
 
-export default connect(state => ({
-  order: state.order,
-  ...selectors.getMenu(state)
-}))(PlaceOrder)
+export default connect(
+  (state, props) => ({
+    order: state.order,
+    ...selectors.getMenu(props.match.params.menuId)(state)
+  }),
+  (dispatch, props) => ({
+    getMenuData: () => dispatch(getMenuEntities(props.match.params))
+  })
+)(PlaceOrder)
 
 const OrderInstructions = ({ copy }) => (
-  <Text is='p' fontSize='12px' fontStyle='italic' pr={4} pt={'2px'}>
+  <Text is='p' fontSize='12px' fontStyle='italic' pr={4} pt={'4px'}>
     <span style={{ fontWeight: 'bold' }}>
       Instructions:
     </span>{' '}
     {copy}
   </Text>
+)
+
+/**
+ * 1. 15px, 16px ml box is same as CloseAction to ensure alignment
+ * it's ugly and not very DRY but it works
+ */
+const SelectionLineItem = ({ name, cost, inverted }) => (
+  <Flex justify='space-between'>
+    <Text fontSize='12px'>
+      {inverted ? 'No ' : ''}{name}
+    </Text>
+    <Flex>
+      <Text fontSize='12px'>
+        {inverted ? '' : cost ? toPrice(cost) : ''}
+      </Text>
+      <Box width='15px' ml='16px' />
+    </Flex>
+  </Flex>
 )
 
 const OrderItem = ({ item, onRequestRemove }) => (
@@ -228,29 +271,51 @@ const OrderItem = ({ item, onRequestRemove }) => (
     px={2}
     borderBottom={`solid 1px ${clr.baseBorder}`}
     align='center'
+    column
   >
-    <Flex>
-      <Title mr={1}>{item.quantity}</Title>
-      <Flex column>
-        <Text>{item.name}</Text>
-        {item.instructions && <OrderInstructions copy={item.instructions} />}
+    <Flex justify='space-between' width='100%'>
+      <Flex>
+        <Title mr={1}>{item.quantity}</Title>
+        <Flex column>
+          <Text>{item.name}</Text>
+        </Flex>
+      </Flex>
+      <Flex align='center' verticalAlign='middle'>
+        <Title>
+          {
+            toPrice(
+              item.servingPortions[item.priceVariationIndex].price *
+                item.quantity
+            )
+          }
+        </Title>
+        <Box ml={2} mb={'-3px'} cursor='pointer'>
+          <CloseAction
+            size='15px'
+            color={clr.primaryCta}
+            onClick={onRequestRemove}
+          />
+        </Box>
       </Flex>
     </Flex>
-    <Flex align='center' verticalAlign='middle'>
-      <Title>
-        {
-          toPrice(
-            item.priceVariations[item.priceVariationIndex].price * item.quantity
-          )
-        }
-      </Title>
-      <Box ml={2} mb={'-3px'} cursor='pointer'>
-        <CloseAction
-          size='15px'
-          color={clr.primaryCta}
-          onClick={onRequestRemove}
-        />
-      </Box>
+    <Flex width='100%' column>
+      {item.selectionSets.map(
+          (set, id) => set.selections.length ? <Box key={set.id} pt='2px'>
+            <Title fontSize='12px' fontStyle='italic'>{set.name}</Title>
+            <Box pt={'2px'}>
+              {
+                  set.selections.map((sel, i) => (
+                    <SelectionLineItem
+                      key={i}
+                      {...sel}
+                      inverted={set.optionsAreDefaults}
+                    />
+                  ))
+                }
+            </Box>
+          </Box> : undefined
+        )}
+      {item.instructions && <OrderInstructions copy={item.instructions} />}
     </Flex>
   </Flex>
 )
@@ -275,7 +340,6 @@ const OrderCart = connect(
     minimumOrderValue: state.locationConfig.minimumOrderValue
   }),
   dispatch => ({
-    moveToCheckout: () => dispatch(phaseForward()),
     removeItemFromOrder: index => dispatch(removeFromOrder(index))
   })
 )(
@@ -348,18 +412,6 @@ const OrderCart = connect(
       )
     }
   })
-)
-
-const CloseAction = ({ onClick, color = clr.textOnLight, size = '25px' }) => (
-  <Close
-    {...{
-      size,
-      onClick,
-      color,
-      css: { cursor: 'pointer', transition: '.2s' },
-      onHover: { transform: 'scale(1.1)' }
-    }}
-  />
 )
 
 const fillViewportStyles = css({

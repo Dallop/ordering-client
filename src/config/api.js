@@ -1,13 +1,10 @@
-import { configureApiMiddleware } from 'redux-axios-api-middleware'
-import { CALL_API } from 'App/state'
+import firebase from 'firebase'
+import 'firebase/firestore'
 
-let apiRoot = 'YOUR_DEV_API'
+firebase.initializeApp({
+  apiKey: 'AIzaSyA2tuaFSWaaura4F7L7KPPPueP4W9PxBrc',
+  authDomain: 'boostly-84933.firebaseapp.com',
+  projectId: 'boostly-84933'
+})
 
-if (!__PROD__) {
-  // eslint-disable-line
-  apiRoot = 'YOUR_PROD_API'
-}
-
-export const API_ROOT = apiRoot
-
-export default configureApiMiddleware(CALL_API, API_ROOT)
+export default firebase.firestore()
