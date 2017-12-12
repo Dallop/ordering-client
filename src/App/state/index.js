@@ -7,6 +7,7 @@ import {
   docToEntity,
   docsToEntities
 } from './utils'
+export const callStore = require('config/api').callStore
 
 const entityNames = [
   'orgs',

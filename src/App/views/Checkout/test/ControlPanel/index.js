@@ -1,11 +1,12 @@
 import React from 'react'
 import Dom from 'react-dom'
 import cc from 'create-react-class'
+import { ThemeProvider } from 'glamorous'
 import { HashRouter } from 'react-router-dom'
 import { Provider, connect } from 'react-redux'
 import { configureStore } from 'state'
 import App from 'App'
-import { Box, Button } from 'boostly-ui'
+import { Box, Button, settings, Input, Title } from 'App/UI'
 import { callStore } from 'App/state'
 import { createAsyncActions as aa } from 'state/utils'
 import { addMinutes } from 'date-fns'
@@ -47,7 +48,7 @@ const base = {
 const ControlPanel = connect()(
   cc({
     getInitialState () {
-      return { isOpen: false }
+      return { isOpen: false, referrerToken: '' }
     },
     getTimestampProps () {
       const time = new Date()
@@ -57,10 +58,21 @@ const ControlPanel = connect()(
         fulfillBy: addMinutes(new Date(), 10)
       }
     },
+    createReferredOrder () {
+      this.postNew({
+        ...{ ...base, items: [ { ...item, id: '321', selectionSets } ] },
+        status: 'awaitingApproval',
+        chargeSource: 'tok_visa',
+        referrerToken: this.state.referrerToken,
+        cost: { total: 25.5, subtotal: 24, tax: 1.5 },
+        ...this.getTimestampProps()
+      })
+    },
     createTransactionRequired () {
       this.postNew({
         ...{ ...base, items: [ { ...item, id: '321', selectionSets } ] },
         status: 'awaitingTransaction',
+        chargeSource: 'tok_visa',
         cost: { total: 25.5, subtotal: 24, tax: 1.5 },
         ...this.getTimestampProps()
       })
@@ -134,6 +146,19 @@ const ControlPanel = connect()(
               Create Validation Required
             </Button>
           </Box>
+          <Box p={2} w='300px'>
+            <Title onDark>For Pete:</Title>
+            <Input
+              value={this.state.referrerToken}
+              onChange={
+                ({ target }) =>
+                  this.setState(prev => ({ referrerToken: target.value }))
+              }
+            />
+            <Button onClick={this.createReferredOrder}>
+              Create Referred Order
+            </Button>
+          </Box>
         </div>
       )
     }
@@ -145,12 +170,14 @@ const root = document.getElementById('root')
 
 const Root = () => (
   <Provider {...{ store, key: 'provider' }}>
-    <HashRouter>
-      <Box height='100%'>
-        <App />
-        <ControlPanel />
-      </Box>
-    </HashRouter>
+    <ThemeProvider theme={settings}>
+      <HashRouter>
+        <Box height='100%'>
+          <App />
+          <ControlPanel />
+        </Box>
+      </HashRouter>
+    </ThemeProvider>
   </Provider>
 )
 

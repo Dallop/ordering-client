@@ -14,9 +14,11 @@ if (__PROD__) {
 
   const Root = () => (
     <Provider {...{ store, key: 'provider' }}>
-      <HashRouter>
-        <App />
-      </HashRouter>
+      <ThemeProvider theme={settings}>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </ThemeProvider>
     </Provider>
   )
 
@@ -25,7 +27,7 @@ if (__PROD__) {
 
 if (__DEV__) {
   // eslint-disable-line
-  require('App/views/ManageOrders/test/ControlPanel')
+  require('App/views/Checkout/test/ControlPanel')
 }
 
 if (module.hot) {

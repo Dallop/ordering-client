@@ -1,4 +1,4 @@
-import db from 'config/api'
+import { db } from 'config/api'
 import { createReducer } from 'state/utils'
 export const orgRef = db.collection('orgs')
 
