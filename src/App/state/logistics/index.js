@@ -2,7 +2,6 @@ import { combineReducers } from 'redux'
 import { createReducer, mapIdsToEntities, refToId } from 'state/utils'
 import { isTakingOrders } from 'App/logic'
 import { makeEntityDuck } from 'App/state/utils'
-import week from './dummy-data'
 
 const UPDATE_LOGISTIC_SELECTION = 'UPDATE_LOGISTIC_SELECTION'
 
@@ -92,31 +91,8 @@ const selections = createReducer(
   }
 )
 
-const options = createReducer(
-  {
-    location: [
-      {
-        id: 1,
-        title: 'Orem MidiCi',
-        address: '541 E University Pkwy, UT 84097',
-        availability: { weekModel: week.location1 }
-      },
-      {
-        id: 2,
-        title: 'American Fork MidiCi',
-        address: '1723 E Main St. American Fork, UT 84003',
-        availability: { weekModel: week.location2 }
-      }
-    ],
-    method: [ { type: 'PICK_UP', label: 'Pick Up' } ],
-    timing: [ { type: 'NOW', label: 'Order for Now' } ]
-  },
-  { UPDATE_LOGISTICS: () => ({}) }
-)
-
 export default combineReducers({
   selections,
-  options,
   locations: locations.reducer,
   pickUpSchedules: pickUpSchedules.reducer
 })
